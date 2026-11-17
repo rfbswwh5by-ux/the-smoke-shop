@@ -37,15 +37,6 @@ export default function AboutSection() {
                   fittingType="fill"
                 />
               </div>
-              <div
-                className="absolute -bottom-6 -left-4 px-6 py-5 sm:-left-6"
-                style={{ backgroundColor: "var(--brand-primary)", color: "#070707" }}
-              >
-                <p className="font-heading text-2xl font-semibold leading-none">2016</p>
-                <p className="mt-1 font-mono text-[9px] uppercase" style={{ letterSpacing: "0.18em" }}>
-                  Independent ever since
-                </p>
-              </div>
             </div>
           </Reveal>
         </div>

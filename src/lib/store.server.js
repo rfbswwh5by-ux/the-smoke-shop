@@ -566,6 +566,7 @@ export async function adminAction(base44, { action, token, payload }) {
     if (error?.code === "UNAUTHORIZED") {
       return { ok: false, code: "UNAUTHORIZED", error: "Your session has expired. Enter your access code again." };
     }
+    console.error(`Admin action "${action}" failed:`, error?.message || error);
     return { ok: false, code: "ERROR", error: error?.message || "Something went wrong." };
   }
 }

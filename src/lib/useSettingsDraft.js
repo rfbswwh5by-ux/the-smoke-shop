@@ -15,11 +15,12 @@ export function useSettingsDraft() {
     setSaving(true);
     try {
       const res = await saveSettings(draft);
-      if (res?.ok) toast.success(message);
-      else toast.error(res?.error || "Could not save those changes.");
+      if (res?.ok) toast.success(message, { description: "Refresh any open tab of your website to see it." });
+      else toast.error(res?.error || "Could not save those changes.", { duration: 10000 });
       return res;
-    } catch {
-      toast.error("Could not save those changes. Please try again.");
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Could not save those changes. Check your connection and try again.", { duration: 10000 });
       return { ok: false };
     } finally {
       setSaving(false);

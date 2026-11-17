@@ -5,7 +5,7 @@
 import { neon } from "@neondatabase/serverless";
 
 let sqlClient;
-let ready;
+let ready = null;
 
 function connectionString() {
   const env = globalThis.process?.env || {};
@@ -14,6 +14,45 @@ function connectionString() {
 
 export function hasDatabase() {
   return Boolean(connectionString());
+}
+
+// Several serverless instances can start at the same moment on a fresh
+// database. Each runs the bootstrap inside one transaction that first takes a
+// transaction-scoped advisory lock, so only one instance creates the table at
+// a time and the others then see it already exists.
+const BOOTSTRAP_LOCK_KEY = 4404401; // any constant; shared by every instance
+const BOOTSTRAP_STATEMENTS = [
+  `SELECT pg_advisory_xact_lock(${BOOTSTRAP_LOCK_KEY})`,
+  `CREATE TABLE IF NOT EXISTS records (
+    entity text NOT NULL,
+    id text NOT NULL,
+    data jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_date timestamptz NOT NULL DEFAULT now(),
+    updated_date timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (entity, id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS records_data_gin ON records USING gin (data jsonb_path_ops)`,
+];
+
+// "Already exists" races that can still slip through (for example from an
+// older deployment without the lock) are harmless: the object exists.
+const ALREADY_EXISTS = new Set(["23505", "42P07", "42710"]);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function bootstrap(sql, { transaction = (queries) => sql.transaction(queries) } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await transaction(BOOTSTRAP_STATEMENTS.map((text) => sql.query(text, [])));
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!ALREADY_EXISTS.has(error?.code)) throw error;
+      await sleep(50 * (attempt + 1));
+    }
+  }
+  throw lastError;
 }
 
 export async function getSql() {
@@ -26,20 +65,14 @@ export async function getSql() {
     }
     sqlClient = neon(url);
   }
-  ready ??= (async () => {
-    await sqlClient.query(`CREATE TABLE IF NOT EXISTS records (
-      entity text NOT NULL,
-      id text NOT NULL,
-      data jsonb NOT NULL DEFAULT '{}'::jsonb,
-      created_date timestamptz NOT NULL DEFAULT now(),
-      updated_date timestamptz NOT NULL DEFAULT now(),
-      PRIMARY KEY (entity, id)
-    )`);
-    await sqlClient.query(`CREATE INDEX IF NOT EXISTS records_data_gin ON records USING gin (data jsonb_path_ops)`);
-  })().catch((error) => {
-    ready = undefined;
-    throw error;
-  });
+  if (!ready) {
+    // A failed bootstrap is never cached: the next request tries again.
+    const attempt = bootstrap(sqlClient);
+    ready = attempt;
+    attempt.catch(() => {
+      if (ready === attempt) ready = null;
+    });
+  }
   await ready;
   return sqlClient;
 }

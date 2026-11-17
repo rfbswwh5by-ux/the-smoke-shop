@@ -117,11 +117,21 @@ export const FONT_CHOICES = [
   { label: "Inter", value: "Inter" },
 ];
 
+// Fields that must never be blank on the public site. An empty value here falls
+// back to the default; every other text field keeps exactly what was saved,
+// so clearing a field in the dashboard really clears it on the site.
+const NEVER_BLANK = new Set(["business_name"]);
+// Photos fall back to the stock photo when removed, so a page never shows a
+// broken or empty image frame.
+const IMAGE_FALLBACKS = new Set(["hero_image_url", "about_image_url"]);
+
 export function mergedSettings(record) {
   if (!record) return { ...SITE_DEFAULTS };
   const clean = {};
   Object.entries(record).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== "") clean[key] = value;
+    if (value === null || value === undefined) return;
+    if (value === "" && (NEVER_BLANK.has(key) || IMAGE_FALLBACKS.has(key))) return;
+    clean[key] = value;
   });
   const hours = Array.isArray(record.hours) && record.hours.length ? record.hours : SITE_DEFAULTS.hours;
   const holiday = Array.isArray(record.holiday_hours) ? record.holiday_hours : SITE_DEFAULTS.holiday_hours;

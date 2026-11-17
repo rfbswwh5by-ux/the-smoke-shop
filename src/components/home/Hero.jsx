@@ -24,21 +24,25 @@ export default function Hero() {
       />
 
       <div className="relative mx-auto w-full max-w-[1400px] px-6 pb-10 pt-40 lg:px-10 lg:pb-14">
-        <p className="eyebrow fade-up" style={{ animationDelay: "0.05s" }}>
-          {site.hero_eyebrow}
-        </p>
+        {site.hero_eyebrow ? (
+          <p className="eyebrow fade-up" style={{ animationDelay: "0.05s" }}>
+            {site.hero_eyebrow}
+          </p>
+        ) : null}
         <h1
           className="fade-up mt-6 max-w-[19ch] text-[clamp(2.6rem,6.6vw,5.4rem)] font-medium leading-[0.94]"
           style={{ animationDelay: "0.14s", color: "var(--brand-ink)" }}
         >
           {site.hero_headline}
         </h1>
-        <p
-          className="fade-up mt-7 max-w-xl text-[15px] leading-relaxed"
-          style={{ animationDelay: "0.24s", color: "var(--brand-muted)" }}
-        >
-          {site.hero_subheadline}
-        </p>
+        {site.hero_subheadline ? (
+          <p
+            className="fade-up mt-7 max-w-xl text-[15px] leading-relaxed"
+            style={{ animationDelay: "0.24s", color: "var(--brand-muted)" }}
+          >
+            {site.hero_subheadline}
+          </p>
+        ) : null}
 
         <div className="fade-up mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.32s" }}>
           <Link to="/products" className="btn-brand group">
